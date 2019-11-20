@@ -118,6 +118,7 @@ typedef enum {
         IMG_VBMETA,
         IMG_RECOVERY,
         IMG_VMLINUX,
+        IMG_VENDOR_BOOT,
         IMG_MAX
 } img_type;
 
@@ -152,6 +153,10 @@ typedef struct BootLinuxParamlist {
   UINT64 ImageSize;
   VOID *DtboImgBuffer;
 
+  // Valid only for boot image header version greater than 2
+  VOID *VendorImageBuffer;
+  UINT64 VendorImageSize;
+
   /* Load addresses for kernel, ramdisk, dt
    * These addresses are either predefined or get from UEFI core */
   UINT64 KernelLoadAddr;
@@ -169,6 +174,10 @@ typedef struct BootLinuxParamlist {
   UINT32 PatchedKernelHdrSize;
   UINT32 DtbOffset;
 
+  // Get the below fields info from the vendor-boot image header
+  // Valid only for boot image header version greater than 2
+  UINT32 VendorRamdiskSize;
+
   //Kernel size rounded off based on the page size
   UINT32 KernelSizeActual;
 
@@ -184,12 +193,16 @@ BootLinux (BootInfo *Info);
 EFI_STATUS
 CheckImageHeader (VOID *ImageHdrBuffer,
                   UINT32 ImageHdrSize,
+                  VOID *VendorImageHdrBuffer,
+                  UINT32 VendorImageHdrSize,
                   UINT32 *ImageSizeActual,
                   UINT32 *PageSize,
                   BOOLEAN BootIntoRecovery);
 EFI_STATUS
-LoadImage (BOOLEAN BootIntoRecovery, CHAR16 *Pname,
-           VOID **ImageBuffer, UINT32 *ImageSizeActual);
+LoadImageHeader (CHAR16 *Pname, VOID **ImageHdrBuffer, UINT32 *ImageHdrSize);
+EFI_STATUS
+LoadImage (CHAR16 *Pname, VOID **ImageBuffer,
+           UINT32 ImageSizeActual, UINT32 PageSize);
 EFI_STATUS
 LaunchApp (IN UINT32 Argc, IN CHAR8 **Argv);
 BOOLEAN TargetBuildVariantUser (VOID);
