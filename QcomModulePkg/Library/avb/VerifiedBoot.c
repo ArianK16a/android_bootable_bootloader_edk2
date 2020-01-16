@@ -1,4 +1,4 @@
-/* Copyright (c) 2017-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,7 +34,6 @@
 #include <Library/MenuKeysDetection.h>
 #include <Library/VerifiedBootMenu.h>
 #include <Library/LEOEMCertificate.h>
-#include <Library/HypervisorMvCalls.h>
 
 STATIC CONST CHAR8 *VerityMode = " androidboot.veritymode=";
 STATIC CONST CHAR8 *VerifiedState = " androidboot.verifiedbootstate=";
@@ -51,7 +50,6 @@ static CHAR8 *avb_verify_partition_name[] = {
      "dtbo",
      "vbmeta",
      "recovery",
-     "vm-linux",
      "vendor-boot"
 };
 
@@ -511,31 +509,6 @@ LoadImageNoAuth (BootInfo *Info)
     ++(*ImgIdx);
   }
 
-  /* Load vm-linux if Verified boot is disabled */
-  if (IsVmEnabled ()) {
-    Status = NoAVBLoadReqImage (Info,
-             (VOID **)&(Info->Images[*ImgIdx].ImageBuffer),
-             (UINT32 *)&(Info->Images[*ImgIdx].ImageSize), Pname, L"vm-linux");
-    if (Status == EFI_NO_MEDIA) {
-      DEBUG ((EFI_D_INFO, "No vm-linux partition is found, Skip..\n"));
-      goto Out;
-    } else if (Status != EFI_SUCCESS) {
-      DEBUG ((EFI_D_ERROR,
-              "ERROR: Failed to load vm-linux from partition: %r\n", Status));
-      goto Err;
-    }
-
-    Info-> Images[*ImgIdx].Name = AllocateZeroPool (StrLen (Pname) + 1);
-    if (!Info->Images[*ImgIdx].Name) {
-      Status = EFI_OUT_OF_RESOURCES;
-      goto Err;
-    }
-
-    UnicodeStrToAsciiStr (Pname, Info->Images[*ImgIdx].Name);
-    ++(*ImgIdx);
-  }
-
-Out:
   return EFI_SUCCESS;
 
 Err:
@@ -585,11 +558,7 @@ LoadImageNoAuthWrapper (BootInfo *Info)
 
    if (!IsDynamicPartitionSupport () &&
         !IsRootCmdLineUpdated (Info)) {
-    SystemPathLen = GetSystemPath (&SystemPath,
-                                   Info->MultiSlotBoot,
-                                   Info->BootIntoRecovery,
-                                   (CHAR16 *)L"system",
-                                   (CHAR8 *)"root");
+    SystemPathLen = GetSystemPath (&SystemPath, Info);
     if (SystemPathLen == 0 || SystemPath == NULL) {
       DEBUG ((EFI_D_ERROR, "GetSystemPath failed!\n"));
       return EFI_LOAD_ERROR;
@@ -652,11 +621,7 @@ LoadImageAndAuthVB1 (BootInfo *Info)
   }
 
   if (!IsRootCmdLineUpdated (Info)) {
-    SystemPathLen = GetSystemPath (&SystemPath,
-                                   Info->MultiSlotBoot,
-                                   Info->BootIntoRecovery,
-                                   (CHAR16 *)L"system",
-                                   (CHAR8 *)"root");
+    SystemPathLen = GetSystemPath (&SystemPath, Info);
     if (SystemPathLen == 0 || SystemPath == NULL) {
       DEBUG ((EFI_D_ERROR, "GetSystemPath failed!\n"));
       return EFI_LOAD_ERROR;
@@ -1217,15 +1182,6 @@ LoadImageAndAuthVB2 (BootInfo *Info)
         CurrentSlot = GetCurrentSlotSuffix ();
     }
 
-    if (IsVmEnabled ()) {
-      if (IsValidPartition (&CurrentSlot, L"vm-linux")) {
-        AddRequestedPartition (RequestedPartitionAll, IMG_VMLINUX);
-        NumRequestedPartition += 1;
-      } else {
-        DEBUG ((EFI_D_VERBOSE, "Invalid vm-linux partition. Skipping\n"));
-      }
-    }
-
     if (IsValidPartition (&CurrentSlot, L"vendor-boot")) {
       AddRequestedPartition (RequestedPartitionAll, IMG_VENDOR_BOOT);
       NumRequestedPartition += 1;
@@ -1603,11 +1559,7 @@ STATIC EFI_STATUS LoadImageAndAuthForLE (BootInfo *Info)
 
 skip_verification:
     if (!IsRootCmdLineUpdated (Info)) {
-        SystemPathLen = GetSystemPath (&SystemPath,
-                                       Info->MultiSlotBoot,
-                                       Info->BootIntoRecovery,
-                                       (CHAR16 *)L"system",
-                                       (CHAR8 *)"root");
+        SystemPathLen = GetSystemPath (&SystemPath, Info);
         if (SystemPathLen == 0 ||
             SystemPath == NULL) {
             return EFI_LOAD_ERROR;
