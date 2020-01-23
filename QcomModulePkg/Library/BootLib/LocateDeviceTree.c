@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -170,7 +170,7 @@ DeviceTreeCompatible (VOID *dtb,
   } else if (board_prop && len_board_id > 0) {
     if (len_board_id % BOARD_ID_SIZE) {
       DEBUG ((EFI_D_ERROR,
-              "qcom,pmic-id (%d) in device tree is not a multiple of (%d)\n",
+              "qcom,board-id (%d) in device tree is not a multiple of (%d)\n",
               len_board_id, BOARD_ID_SIZE));
       goto Exit;
     }
@@ -914,7 +914,7 @@ cleanup:
 /*
  * For Header Version 2, the arguments Kernel and KernelSize will be
  * the entire bootimage and the bootimage size.
- * For Header Version 3, Kernel holds the base of the vendor-boot
+ * For Header Version 3, Kernel holds the base of the vendor_boot
  * image and KernelSize holds its size.
  */
 VOID *
