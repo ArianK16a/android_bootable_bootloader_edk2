@@ -67,6 +67,7 @@
 	PartialGoods.c
 	LECmdLine.c
 	HypervisorMvCalls.c
+	FdtRw.c
 
 [Packages]
 	ArmPkg/ArmPkg.dec
@@ -161,6 +162,7 @@
 	gQcomTokenSpaceGuid.EnableDisplayMenu
 	gQcomTokenSpaceGuid.KernelLoadAddress32
 	gQcomTokenSpaceGuid.EnableMdtpSupport
+	gQcomTokenSpaceGuid.EnableNewNodeSearchFuc
 
 [Depex]
 	TRUE
