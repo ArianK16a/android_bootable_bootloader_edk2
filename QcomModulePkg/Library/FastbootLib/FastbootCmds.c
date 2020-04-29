@@ -1896,17 +1896,15 @@ CmdFlash (IN CONST CHAR8 *arg, IN VOID *data, IN UINT32 sz)
 
       if (!EFI_ERROR (Status)) {
         FastbootOkay ("");
+        goto out;
       }
     }
 
-    if (EFI_ERROR (Status) ||
-      !IsUseMThreadParallel ()) {
-      FlashResult = HandleSparseImgFlash (PartitionName,
-                                        ARRAY_SIZE (PartitionName),
-                                        mFlashDataBuffer, mFlashNumDataBytes);
-      IsFlashComplete = TRUE;
-      StopUsbTimer ();
-    }
+    FlashResult = HandleSparseImgFlash (PartitionName,
+                                      ARRAY_SIZE (PartitionName),
+                                      mFlashDataBuffer, mFlashNumDataBytes);
+    IsFlashComplete = TRUE;
+    StopUsbTimer ();
   } else if (!AsciiStrnCmp (UbiHeader->HdrMagic, UBI_HEADER_MAGIC, 4)) {
     FlashResult = HandleUbiImgFlash (PartitionName,
                                      ARRAY_SIZE (PartitionName),
@@ -2409,17 +2407,14 @@ VOID ThreadSleep (TimeDuration Delay)
   KernIntf->Thread->ThreadSleep (Delay);
 }
 
-#ifdef DISABLE_MULTITHREAD_DOWNLOAD_FLASH
 BOOLEAN IsUseMThreadParallel (VOID)
 {
+  if (FixedPcdGetBool (EnableMultiThreadFlash)) {
+    return IsMultiThreadSupported;
+  }
+
   return FALSE;
 }
-#else
-BOOLEAN IsUseMThreadParallel (VOID)
-{
-  return IsMultiThreadSupported;
-}
-#endif
 
 VOID InitMultiThreadEnv ()
 {
