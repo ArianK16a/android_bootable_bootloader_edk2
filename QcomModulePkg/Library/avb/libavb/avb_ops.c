@@ -117,14 +117,6 @@ typedef struct {
         EFI_GUID *Guid;
 }AvbPartitionDetails;
 
-static AvbPartitionDetails SupportedPartitions[] =
-{
-  { "vbmeta", &gEfiVbmetaPartitionGuid },
-  { "boot", &gEfiBootImgPartitionGuid },
-  { "dtbo", &gEfiDtboPartitionGuid },
-  { "recovery", &gEfiRecoveryImgPartitionGuid} ,
-};
-
 AvbIOResult AvbReadFromPartition(AvbOps *Ops, const char *Partition, int64_t ReadOffset,
                      size_t NumBytes, void *Buffer, size_t *OutNumRead)
 {
@@ -140,12 +132,6 @@ AvbIOResult AvbReadFromPartition(AvbOps *Ops, const char *Partition, int64_t Rea
         UINT64 LastBlock = 0;
         UINT64 FullBlock = 0;
         UINT64 StartPageReadSize = 0;
-        UINT32 BlkIOAttrib = 0;
-        PartiSelectFilter HandleFilter;
-        UINT32 MaxHandles = 0;
-        AvbPartitionDetails *List = SupportedPartitions;
-        UINT32 Count = ARRAY_SIZE (SupportedPartitions);
-        EFI_GUID *PType = NULL;
         UINT64 LoadImageStartTime = GetTimerCountms ();
 
 	if (Partition == NULL || Buffer == NULL || OutNumRead == NULL || NumBytes <= 0) {
@@ -155,56 +141,12 @@ AvbIOResult AvbReadFromPartition(AvbOps *Ops, const char *Partition, int64_t Rea
 	}
 	*OutNumRead = 0;
 
-        for (size_t Index = 0; Index < Count; Index++) {
-                if (!AsciiStrCmp (List[Index].Name, Partition)) {
-                             DEBUG ((EFI_D_INFO,
-                                  "Partition found: %a\n", Partition));
-                             PType = List[Index].Guid;
-                 }
+        Result = GetHandleInfo (Partition, InfoList);
+        if (Result != AVB_IO_RESULT_OK) {
+                DEBUG ((EFI_D_ERROR,
+                        "AvbGetSizeOfPartition: GetHandleInfo failed"));
+                goto out;
         }
-
-        if (PType) {
-                BlkIOAttrib = BLK_IO_SEL_PARTITIONED_GPT;
-                BlkIOAttrib |= BLK_IO_SEL_MEDIA_TYPE_NON_REMOVABLE;
-                BlkIOAttrib |= BLK_IO_SEL_MATCH_PARTITION_TYPE_GUID;
-
-                HandleFilter.RootDeviceType = NULL;
-                HandleFilter.PartitionType = PType;
-                HandleFilter.VolumeName = NULL;
-
-                MaxHandles = ARRAY_SIZE (InfoList);
-
-                Status = GetBlkIOHandles (BlkIOAttrib, &HandleFilter,
-                           InfoList, &MaxHandles);
-                if (Status == EFI_SUCCESS) {
-                        if (MaxHandles == 0) {
-                            DEBUG ((EFI_D_INFO,
-                            "Partition Not found: %s\n", Partition));
-                            Result = AVB_IO_RESULT_ERROR_NO_SUCH_PARTITION;
-                            goto out;
-                }
-
-                if (MaxHandles != 1) {
-                /* Unable to deterministically load from single partition */
-                             DEBUG ((EFI_D_INFO,
-                             "multiple partitions found: %s\n", Partition));
-                              Result = AVB_IO_RESULT_ERROR_IO;
-                              goto out;
-                     }
-                 } else {
-                      DEBUG ((EFI_D_INFO,
-                       "GetBlkIOHandles failed with error: %d\n", Status));
-                        Result = AVB_IO_RESULT_ERROR_IO;
-                        goto out;
-               }
-          } else {
-                Result = GetHandleInfo (Partition, InfoList);
-                if (Result != AVB_IO_RESULT_OK) {
-                      DEBUG ((EFI_D_ERROR,
-                       "AvbGetSizeOfPartition: GetHandleInfo failed"));
-                      goto out;
-           }
-       }
 
 	BlockIo = InfoList[0].BlkIo;
 	PartitionSize = (BlockIo->Media->LastBlock + 1) * BlockIo->Media->BlockSize;
@@ -428,6 +370,34 @@ AvbValidateVbmetaPublicKey(AvbOps *Ops, const uint8_t *PublicKeyData,
 	return AVB_IO_RESULT_OK;
 }
 
+
+AvbIOResult
+AvbValidatePartitionPublicKey(AvbOps *Ops, const char* Partition,
+                           const uint8_t *PublicKeyData, size_t PublicKeyLength,
+                           const uint8_t *PublicKeyMetadata, size_t PublicKeyMetadataLength,
+                           bool *OutIsTrusted, uint32_t* OutRollbackIndexLocation)
+{
+	DEBUG((EFI_D_VERBOSE, "ValidatePartitionPublicKey PublicKeyLength %d, "
+	                      "PublicKeyMetadataLength %d\n",
+	       PublicKeyLength, PublicKeyMetadataLength));
+
+	if (OutIsTrusted == NULL || PublicKeyData == NULL) {
+		DEBUG((EFI_D_ERROR, "Invalid parameters\n"));
+		return AVB_IO_RESULT_ERROR_IO;
+	}
+
+	if (PublicKeyLength == ARRAY_SIZE(OEMPublicKey) &&
+	           CompareMem(PublicKeyData, OEMPublicKey, PublicKeyLength) == 0) {
+		*OutIsTrusted = true;
+	} else {
+		*OutIsTrusted = false;
+	}
+	*OutRollbackIndexLocation = 1; // Recovery rollback index
+	DEBUG((EFI_D_ERROR,
+	       "ValidateVbmetaPublicKey OutIsTrusted %d\n",*OutIsTrusted));
+	return AVB_IO_RESULT_OK;
+}
+
 AvbIOResult AvbReadRollbackIndex(AvbOps *Ops, size_t RollbackIndexLocation,
                                  uint64_t *OutRollbackIndex)
 {
@@ -603,6 +573,7 @@ AvbOps *AvbOpsNew(VOID *UserData)
 	Ops->read_from_partition = AvbReadFromPartition;
 	Ops->write_to_partition = AvbWriteToPartition;
 	Ops->validate_vbmeta_public_key = AvbValidateVbmetaPublicKey;
+	Ops->validate_public_key_for_partition = AvbValidatePartitionPublicKey;
 	Ops->read_rollback_index = AvbReadRollbackIndex;
 	Ops->write_rollback_index = AvbWriteRollbackIndex;
 	Ops->read_is_device_unlocked = AvbReadIsDeviceUnlocked;

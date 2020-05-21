@@ -31,6 +31,7 @@
 #include "BootImage.h"
 #include "KeymasterClient.h"
 #include "libavb/libavb.h"
+#include <FastbootLib/FastbootCmds.h>
 #include <Library/MenuKeysDetection.h>
 #include <Library/VerifiedBootMenu.h>
 #include <Library/LEOEMCertificate.h>
@@ -1133,6 +1134,8 @@ LoadImageAndAuthVB2 (BootInfo *Info)
            IsDynamicPartitionSupport ()) &&
            (Info->BootIntoRecovery &&
            !IsBuildUseRecoveryAsBoot ())) {
+    if (!Info->MultiSlotBoot)
+              VerifyFlags = VerifyFlags | AVB_SLOT_VERIFY_FLAGS_NO_VBMETA_PARTITION;
     AddRequestedPartition (RequestedPartitionAll, IMG_RECOVERY);
     NumRequestedPartition += 1;
     Result = avb_slot_verify (Ops, (CONST CHAR8 *CONST *)RequestedPartition,
@@ -1578,6 +1581,8 @@ LoadImageAndAuth (BootInfo *Info)
   BOOLEAN MdtpActive = FALSE;
   QCOM_MDTP_PROTOCOL *MdtpProtocol;
   UINT32 AVBVersion = NO_AVB;
+
+  WaitForFlashFinished ();
 
   if (Info == NULL) {
     DEBUG ((EFI_D_ERROR, "Invalid parameter Info\n"));
