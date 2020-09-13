@@ -2875,99 +2875,6 @@ CmdRebootBootloader (CONST CHAR8 *arg, VOID *data, UINT32 sz)
   FastbootFail ("Failed to reboot");
 }
 
-#if (defined(ENABLE_DEVICE_CRITICAL_LOCK_UNLOCK_CMDS) ||                       \
-     defined(ENABLE_UPDATE_PARTITIONS_CMDS))
-STATIC UINT8
-is_display_supported ( VOID )
-{
-  EFI_STATUS Status = EFI_SUCCESS;
-  EfiQcomDisplayUtilsProtocol *pDisplayUtilProtocol;
-  EFI_GUID DisplayUtilGUID = EFI_DISPLAYUTILS_PROTOCOL_GUID;
-  EFI_DISPLAY_UTILS_PANEL_CONFIG_PARAMS PanelConfig;
-  UINT32 Index = 0;
-  UINT32 ParamSize = sizeof (PanelConfig);
-  PanelConfig.uPanelIndex = Index;
-
-  if (EFI_SUCCESS == gBS->LocateProtocol (&DisplayUtilGUID,
-                                    NULL,
-                                    (VOID **)&pDisplayUtilProtocol)) {
-     Status = pDisplayUtilProtocol->DisplayUtilsGetProperty (
-                                     EFI_DISPLAY_UTILS_PANEL_CONFIG,
-                                    (VOID*)&PanelConfig, &ParamSize);
-     if ( Status == EFI_NOT_FOUND ) {
-       DEBUG ((EFI_D_VERBOSE, "Display is not supported\n"));
-       return 0;
-     }
-   }
-   DEBUG ((EFI_D_VERBOSE, "Display is enabled\n"));
-   return 1;
-}
-
-STATIC VOID
-SetDeviceUnlock (UINT32 Type, BOOLEAN State)
-{
-  BOOLEAN is_unlocked = FALSE;
-  char response[MAX_RSP_SIZE] = {0};
-  EFI_STATUS Status;
-
-  if (Type == UNLOCK)
-    is_unlocked = IsUnlocked ();
-  else if (Type == UNLOCK_CRITICAL)
-    is_unlocked = IsUnlockCritical ();
-  if (State == is_unlocked) {
-    AsciiSPrint (response, MAX_RSP_SIZE, "\tDevice already : %a",
-                 (State ? "unlocked!" : "locked!"));
-    FastbootFail (response);
-    return;
-  }
-
-  /* If State is TRUE that means set the unlock to true */
-  if (State && !IsAllowUnlock) {
-    FastbootFail ("Flashing Unlock is not allowed\n");
-    return;
-  }
-
-  if (GetAVBVersion () != AVB_LE &&
-      is_display_supported () &&
-      IsEnableDisplayMenuFlagSupported ()) {
-    Status = DisplayUnlockMenu (Type, State);
-    if (Status != EFI_SUCCESS) {
-      FastbootFail ("Command not support: the display is not enabled");
-      return;
-    } else {
-      FastbootOkay ("");
-    }
-  } else {
-    Status = SetDeviceUnlockValue (Type, State);
-    if (Status != EFI_SUCCESS) {
-         AsciiSPrint (response, MAX_RSP_SIZE, "\tSet device %a failed: %r",
-                  (State ? "unlocked!" : "locked!"), Status);
-         FastbootFail (response);
-         return;
-    }
-    FastbootOkay ("");
-    if (GetAVBVersion () != AVB_LE &&
-       !IsEnableDisplayMenuFlagSupported ()) {
-      RebootDevice (RECOVERY_MODE);
-    }
-  }
-}
-#endif
-
-#ifdef ENABLE_UPDATE_PARTITIONS_CMDS
-STATIC VOID
-CmdFlashingUnlock (CONST CHAR8 *arg, VOID *data, UINT32 sz)
-{
-  SetDeviceUnlock (UNLOCK, TRUE);
-}
-
-STATIC VOID
-CmdFlashingLock (CONST CHAR8 *arg, VOID *data, UINT32 sz)
-{
-  SetDeviceUnlock (UNLOCK, FALSE);
-}
-#endif
-
 #ifdef ENABLE_DEVICE_CRITICAL_LOCK_UNLOCK_CMDS
 STATIC VOID
 CmdFlashingLockCritical (CONST CHAR8 *arg, VOID *data, UINT32 sz)
@@ -3675,8 +3582,6 @@ FastbootCommandSetup (IN VOID *Base, IN UINT64 Size)
       {"erase:", CmdErase},
       {"set_active", CmdSetActive},
       {"flashing get_unlock_ability", CmdFlashingGetUnlockAbility},
-      {"flashing unlock", CmdFlashingUnlock},
-      {"flashing lock", CmdFlashingLock},
 #endif
 /*
  *CAUTION(CRITICAL): Enabling these commands will allow changes to bootimage.
