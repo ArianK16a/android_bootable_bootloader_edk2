@@ -219,9 +219,9 @@ LinuxLoaderEntry (IN EFI_HANDLE ImageHandle, IN EFI_SYSTEM_TABLE *SystemTable)
 
   Status = GetKeyPress (&KeyPressed);
   if (Status == EFI_SUCCESS) {
-    if (KeyPressed == SCAN_DOWN)
+    if ((KeyPressed == SCAN_DOWN) || (KeyPressed == SCAN_DELETE))
       BootIntoFastboot = TRUE;
-    if (KeyPressed == SCAN_UP)
+    if ((KeyPressed == SCAN_UP) || (KeyPressed == SCAN_HOME))
       BootIntoRecovery = TRUE;
     if (KeyPressed == SCAN_ESC)
       RebootDevice (EMERGENCY_DLOAD);
