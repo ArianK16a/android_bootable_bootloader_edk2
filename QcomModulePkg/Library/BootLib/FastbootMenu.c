@@ -82,7 +82,7 @@ STATIC MENU_MSG_INFO mFastbootCommonMsgInfo[] = {
      COMMON,
      0,
      NOACTION},
-    {{"FastBoot Mode"},
+    {{"Fastboot mode\n\n"},
      COMMON_FACTOR,
      BGR_ORANGE,
      BGR_BLACK,
