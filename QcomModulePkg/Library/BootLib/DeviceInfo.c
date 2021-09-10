@@ -293,7 +293,7 @@ EFI_STATUS DeviceInfoInit (VOID)
       DevInfo.is_unlocked = TRUE;
       DevInfo.is_unlock_critical = TRUE;
     }
-    DevInfo.is_charger_screen_enabled = FALSE;
+    DevInfo.is_charger_screen_enabled = TRUE;
     DevInfo.verity_mode = TRUE;
     Status =
         ReadWriteDeviceInfo (WRITE_CONFIG, (VOID *)&DevInfo, sizeof (DevInfo));
