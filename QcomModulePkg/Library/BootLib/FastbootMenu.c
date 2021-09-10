@@ -278,24 +278,33 @@ FastbootMenuShowScreen (OPTION_MENU_INFO *OptionMenuInfo)
                      sizeof (StrTemp1));
       break;
     case 5:
-      /* Get bootloader version */
+      /* Get bootloader version, only show if not empty */
       GetBootloaderVersion (VersionTemp, sizeof (VersionTemp));
+      if (VersionTemp[0] == '\0') {
+        continue;
+      }
       AsciiStrnCatS (mFastbootCommonMsgInfo[i].Msg,
                      sizeof (mFastbootCommonMsgInfo[i].Msg), VersionTemp,
                      sizeof (VersionTemp));
       break;
     case 6:
-      /* Get baseband version */
+      /* Get baseband version, only show if not empty */
       ZeroMem (VersionTemp, sizeof (VersionTemp));
       GetRadioVersion (VersionTemp, sizeof (VersionTemp));
+      if (VersionTemp[0] == '\0') {
+        continue;
+      }
       AsciiStrnCatS (mFastbootCommonMsgInfo[i].Msg,
                      sizeof (mFastbootCommonMsgInfo[i].Msg), VersionTemp,
                      sizeof (VersionTemp));
       break;
     case 7:
-      /* Get serial number */
+      /* Get serial number, only show if not empty */
       ZeroMem (StrTemp, sizeof (StrTemp));
       BoardSerialNum (StrTemp, MAX_RSP_SIZE);
+      if (StrTemp[0] == '\0') {
+        continue;
+      }
       AsciiStrnCatS (mFastbootCommonMsgInfo[i].Msg,
                      sizeof (mFastbootCommonMsgInfo[i].Msg), StrTemp,
                      sizeof (StrTemp));
