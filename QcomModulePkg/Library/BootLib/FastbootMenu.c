@@ -74,8 +74,8 @@ STATIC MENU_MSG_INFO mFastbootOptionTitle[] = {
 };
 
 STATIC MENU_MSG_INFO mFastbootCommonMsgInfo[] = {
-    {{"\nPress volume key to select, "
-      "and press power key to select\n\n"},
+    {{"\nPress the volume up/down keys to navigate "
+      "and the power key to select.\n\n"},
      COMMON_FACTOR,
      BGR_WHITE,
      BGR_BLACK,
