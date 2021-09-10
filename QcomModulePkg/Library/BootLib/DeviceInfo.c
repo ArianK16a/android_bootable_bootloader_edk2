@@ -276,6 +276,9 @@ EFI_STATUS DeviceInfoInit (VOID)
       return Status;
     }
 
+    AsciiStrnCpyS (DevInfo.bootloader_version, MAX_VERSION_LEN, PRODUCT_VERSION,
+				   AsciiStrLen (PRODUCT_VERSION));
+
     FirstReadDevInfo = FALSE;
   }
 
