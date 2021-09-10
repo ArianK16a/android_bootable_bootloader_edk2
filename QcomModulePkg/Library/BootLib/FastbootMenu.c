@@ -140,7 +140,7 @@ STATIC MENU_MSG_INFO mFastbootCommonMsgInfo[] = {
      NOACTION},
     {{"DEVICE STATE - "},
      COMMON_FACTOR,
-     BGR_RED,
+     BGR_WHITE,
      BGR_BLACK,
      COMMON,
      0,
